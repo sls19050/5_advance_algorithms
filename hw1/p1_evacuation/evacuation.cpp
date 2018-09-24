@@ -214,9 +214,12 @@ void bfs(FlowGraph resiGraph, FlowGraph graph, std::queue<int>& listEdges, int& 
     }
 
     //showDict(nodeParents);
-    getMinFlow(nodeParents, resiGraph, listEdges, minFlow);
+    if(!breaker){
+        getMinFlow(nodeParents, resiGraph, listEdges, minFlow);
+    }
     //std::cout<<"minFlow = "<< minFlow<<"\n";
 }
+
 
 void addFlow(FlowGraph& graph, std::queue<int>& listEdges, int minFlow){
     while(!listEdges.empty()){
@@ -246,6 +249,11 @@ int main() {
     std::queue<int> listEdges;
     int minFlow = 0;
     int breaker = 0;
+
+    bfs(resiGraph, graph, listEdges, minFlow, breaker);
+    addFlow(graph, listEdges, minFlow);
+    //showGraph(graph);
+    resiGraph = getResi(graph);
 
     while (!breaker){
         bfs(resiGraph, graph, listEdges, minFlow, breaker);
