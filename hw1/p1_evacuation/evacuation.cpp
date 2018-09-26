@@ -19,16 +19,15 @@ public:
         int from, to, capacity, flow;
     };
 
-//private:
 public:
     /* List of all - forward and backward - edges */
     vector<Edge> edges;
 
     /* These adjacency lists store only indices of edges in the edges list */
-    vector<vector<int> > graph;
+    vector<vector<size_t> > graph;
 
 public:
-    explicit FlowGraph(int n): graph(n) {}
+    explicit FlowGraph(size_t n): graph(n) {}
 
     void add_edge(int from, int to, int capacity) {
         /* Note that we first append a forward edge and then a backward edge,
@@ -42,20 +41,19 @@ public:
         edges.push_back(backward_edge);
     }
 
-    int size() const {
+    size_t size() const {
         return graph.size();
     }
 
-    const vector<int>& get_ids(int from) const {
+    const vector<size_t>& get_ids(int from) const {
         return graph[from];
     }
 
-
-    const Edge& get_edge(int id) const {
+    const Edge& get_edge(size_t id) const {
         return edges[id];
     }
 
-    void add_flow(int id, int flow) {
+    void add_flow(size_t id, int flow) {
         /* To get a backward edge for a true forward edge (i.e id is even), we should get id + 1
          * due to the described above scheme. On the other hand, when we have to get a "backward"
          * edge for a backward edge (i.e. get a forward edge for backward - id is odd), id - 1
@@ -63,14 +61,8 @@ public:
          *
          * It turns out that id ^ 1 works for both cases. Think this through! */
         edges[id].flow += flow;
-        //edges[id ^ 1].flow -= flow;
+        edges[id ^ 1].flow -= flow;
     }
-
-    void compResi(){
-
-    }
-
-
 };
 
 void showEdge(FlowGraph& graph, int j){
@@ -83,12 +75,13 @@ void showEdge(FlowGraph& graph, int j){
 void showGraph(FlowGraph& graph){
     std::cout << "show graph edges: \n";
     for(int j = 0; j<graph.edges.size();j++){
+        std::cout<<"this is j = "<<j<<"\n";
         showEdge(graph, j);
     }
     std::cout << "show connecting_edges \n";
     for(int j = 0; j<graph.size();j++){
         std::cout<<"\n connecting edges from node j="<<j<<": ";
-        vector<int> connecting_edges = graph.get_ids(j);
+        vector<size_t> connecting_edges = graph.get_ids(j);
         for (int i = 0; i<connecting_edges.size();i++){
             std::cout<<connecting_edges[i]<<" ";
         }
@@ -130,11 +123,11 @@ FlowGraph read_data() {
     return graph;
 }
 
-void getMinFlow(std::map<int, std::tuple<int,int>>& nodeParents, FlowGraph& resiGraph, std::queue<int>& listEdges, int& minFlow, int lastEdge){
+void getMinFlow(std::map<int, std::tuple<int,int>>& nodeParents, FlowGraph& graph, std::queue<int>& listEdges, int& minFlow, int lastEdge){
 
     int childNode, parentNode, flow, edgeID;
     std::tuple<int,int> parent;
-    minFlow = resiGraph.edges[lastEdge].flow;
+    minFlow = graph.edges[lastEdge].capacity - graph.edges[lastEdge].flow; //residual flow
     listEdges.push(lastEdge);
 
     int childEdge = lastEdge;
@@ -143,35 +136,37 @@ void getMinFlow(std::map<int, std::tuple<int,int>>& nodeParents, FlowGraph& resi
         parentNode = std::get<0>(parent);
         edgeID = std::get<1>(parent);
         listEdges.push(edgeID);
-        flow = resiGraph.edges[edgeID].flow;
+        flow = graph.edges[edgeID].capacity - graph.edges[edgeID].flow;
         if (flow < minFlow) {minFlow = flow;}
         childEdge = edgeID;
     }   while (parentNode != 0);
     //return minFlow;
 }
 
-void bfs(FlowGraph resiGraph, FlowGraph graph, std::queue<int>& listEdges, int& minFlow, int& breaker) {
+void bfs(FlowGraph graph, std::queue<int>& listEdges, int& minFlow, int& breaker) {
     breaker = 1;
     int lastEdge = -1;
     //std::cout<<"\nstart_bfs\n";
     std::queue<int> myQueue;
     //std::vector<int> nodeLevels(graph.size(),2147483647);
     std::map<int, std::tuple<int,int>> nodeParents;
-    vector<int> visited(resiGraph.edges.size(),0);
-    int endNode = resiGraph.size()-1;
+    //vector<int> visited(graph.edges.size(),0);
+    vector<int> visitedNode(graph.size(),0);
+    int endNode = graph.size()-1;
     //nodeLevels[0] = 0;
 
     //visited[0]=1;
-    vector<int> connecting_edges = resiGraph.get_ids(0);
+    visitedNode[0] = 1;
+    vector<size_t> connecting_edges = graph.get_ids(0);
     //std::cout<<"connecting_edges size = "<<connecting_edges.size()<<"\n";
 
     int curEdgeID, fromNode, toNode, capacity, flow;
     for(int i = 0; i<connecting_edges.size(); i++){
         curEdgeID = connecting_edges[i];
-        flow = resiGraph.edges[curEdgeID].flow;
-        toNode = resiGraph.edges[curEdgeID].to;
+        flow = graph.edges[curEdgeID].capacity - graph.edges[curEdgeID].flow; //defining the residual flow
+        toNode = graph.edges[curEdgeID].to;
         //std::cout<<"Did i continue? ";
-        if (flow == 0 || visited[curEdgeID]){
+        if (flow == 0 || visitedNode[toNode]){
             //std::cout<<"flow = 0\n";
             continue;
         }
@@ -188,29 +183,31 @@ void bfs(FlowGraph resiGraph, FlowGraph graph, std::queue<int>& listEdges, int& 
         curEdgeID = myQueue.front();
         myQueue.pop();
         //std::cout<<"curEdgeID = "<<curEdgeID<<"\n";
-        toNode = resiGraph.edges[curEdgeID].to;
-        capacity = resiGraph.edges[curEdgeID].capacity;
-        flow = resiGraph.edges[curEdgeID].flow;
-        fromNode = resiGraph.edges[curEdgeID].from;
+        toNode = graph.edges[curEdgeID].to;
+        capacity = graph.edges[curEdgeID].capacity;
+        flow = capacity - graph.edges[curEdgeID].flow;
+        fromNode = graph.edges[curEdgeID].from;
         //std::cout<<"toNode, flow = "<<toNode<<", "<<flow<<"\n";
-
+        //die("line 196");
 
         //showDict(nodeParents);
-        visited[curEdgeID] = 1;
+        //visited[curEdgeID] = 1;
+        visitedNode[toNode] = 1;
         if(toNode == endNode){
             //std::cout<<"breaking\n";
             breaker = 0;
             lastEdge = curEdgeID;
             break;
         }
-        connecting_edges = resiGraph.get_ids(toNode);
+        connecting_edges = graph.get_ids(toNode);
         int childEdge;
         for(int i = 0; i<connecting_edges.size(); i++){
             childEdge = connecting_edges[i];
             nodeParents[childEdge] = std::make_tuple(fromNode,curEdgeID);
-            flow = resiGraph.edges[childEdge].flow;
-            toNode = resiGraph.edges[childEdge].to;
-            if (flow == 0 || visited[childEdge]){
+            flow = graph.edges[childEdge].capacity - graph.edges[childEdge].flow;
+            toNode = graph.edges[childEdge].to;
+            //if (flow == 0 || visited[childEdge] || visitedNode[toNode] ){
+            if (flow == 0 || visitedNode[toNode] ){
                 //std::cout<<"flow = 0\n";
                 continue;
             }
@@ -221,7 +218,7 @@ void bfs(FlowGraph resiGraph, FlowGraph graph, std::queue<int>& listEdges, int& 
 
     //showDict(nodeParents);
     if(!breaker){
-        getMinFlow(nodeParents, resiGraph, listEdges, minFlow, lastEdge);
+        getMinFlow(nodeParents, graph, listEdges, minFlow, lastEdge);
 
     }
     //std::cout<<"minFlow = "<< minFlow<<"\n";
@@ -239,8 +236,9 @@ void addFlow(FlowGraph& graph, std::queue<int>& listEdges, int minFlow){
 
 int max_flow(FlowGraph& graph) {
     int flow = 0;
-    vector<int> connecting_edges = graph.get_ids(0);
+    vector<size_t> connecting_edges = graph.get_ids(0);
     for (int i = 0; i<connecting_edges.size();i++){
+        //std::cout<<"adding up flows: i, edgeID, flow = "<<i<<" "<<connecting_edges[i]<<" "<<graph.edges[connecting_edges[i]].flow<<"\n";
         flow = flow + graph.edges[connecting_edges[i]].flow;
     }
     return flow;
@@ -258,10 +256,10 @@ int main() {
     int breaker = 0;
 
     while (!breaker){
-        bfs(resiGraph, graph, listEdges, minFlow, breaker);
+        bfs(graph, listEdges, minFlow, breaker);
         addFlow(graph, listEdges, minFlow);
         //showGraph(graph);
-        resiGraph = getResi(graph);
+        //resiGraph = getResi(graph);
 
     }
 
