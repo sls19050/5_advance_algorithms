@@ -67,7 +67,7 @@ class MaxMatching {
         cin >> bit;
         //adj_matrix[i][j] = (bit == 1);
         if (bit){
-          cout<<"adding edge i,j:"<<i<<" "<<j<<"\n";
+          //cout<<"adding edge i,j:"<<i<<" "<<j<<"\n";
           add_edge(i, j);
         }
       }
@@ -80,8 +80,7 @@ class MaxMatching {
 
   void WriteResponse(const vector<int>& matching) {
     for (int i = 0; i < matching.size(); ++i) {
-        cout << matching[i]-answer.size()<<" ";
-
+        cout << matching[i]<<" ";
     }
     cout << "\n";
   }
@@ -133,7 +132,7 @@ class MaxMatching {
       if (curEdge != -1){
         add_flow(curEdge);
         int newEdge = trackEdges[curEdge];
-        cout<<"newEdge = "<< newEdge<<"\n";
+        //cout<<"newEdge = "<< newEdge<<"\n";
         updateGraph(trackEdges, newEdge);
       }
   }
@@ -141,12 +140,12 @@ class MaxMatching {
   void dfs( int oldEdge, int curNode, vector<int>& visited, vector<int>& trackEdges, int& breaker, int& lastEdge) {
     //die("line 121");
     visited[curNode] = 1;
-    cout<<"curNode = "<<curNode<<"\n";
-    cout<<"breaker = "<<breaker<<"\n";
-    cout<<"true to break? : "<<curNode - graph.size() + 1<<"\n";
+    //cout<<"curNode = "<<curNode<<"\n";
+    //cout<<"breaker = "<<breaker<<"\n";
+    //cout<<"true to break? : "<<curNode - graph.size() + 1<<"\n";
     if(!breaker){
         if(curNode == graph.size()-1){
-            cout<<"breaking!!!!!!!!!!!!!!\n";
+            //cout<<"breaking!!!!!!!!!!!!!!\n";
             lastEdge = oldEdge;
             breaker = 1;
         }
@@ -154,7 +153,7 @@ class MaxMatching {
             int edgeID = graph[curNode][i];
             int endNode = edges[edgeID].to;
             int resiFlow = edges[edgeID].capacity-edges[edgeID].flow;
-            cout<<"save edge:"<<edgeID<<"\n";
+            //cout<<"save edge:"<<edgeID<<"\n";
             trackEdges[edgeID] = oldEdge;
 
             if (visited[endNode] || !resiFlow) {continue;}
@@ -165,14 +164,17 @@ class MaxMatching {
   vector<int> returnMatch(){
 
       for(int i = 0; i<answer.size(); ++i){
+        bool noEdge = true;
         for (int j = 0; j<graph[i+1].size();++j){
           int edgeID = graph[i+1][j];
           int toNode = edges[edgeID].to;
           if(edges[edgeID].flow == 1){
-            answer[i] = toNode;
+            answer[i] = toNode-answer.size();
+            noEdge = false;
             continue;
           }
         }
+        if (noEdge){answer[i] = -1;}
       }
       return answer;
   }
@@ -188,14 +190,13 @@ class MaxMatching {
         int lastEdge;
         dfs(-1, 0, visited, trackEdges, breaker, lastEdge);
         //cout<<"checkVal = "<< checkVal<<"\n";
-        cout<<"lastEdge = "<<lastEdge<<"\n";
+        //cout<<"lastEdge = "<<lastEdge<<"\n";
         updateGraph(trackEdges, lastEdge);
-        cout<<"done update graph\n";
+        //cout<<"done update graph\n";
         //showTrack(trackEdges);
     }
 
     return returnMatch();
-    return {0};
   }
 };
 
