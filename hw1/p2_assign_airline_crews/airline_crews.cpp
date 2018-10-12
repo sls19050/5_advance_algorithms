@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <cstdlib>
 
 using std::vector;
 using std::cin;
@@ -35,6 +36,12 @@ class MaxMatching {
     vector<int> matching = FindMatching();
     WriteResponse(matching);
   }
+  void TestSolve() {
+    RandomData();
+    vector<int> matching = FindMatching();
+    WriteResponse(matching);
+    //CountingCheck(matching);
+  }
 
  private:
   void add_edge(int from, int to) {
@@ -47,6 +54,35 @@ class MaxMatching {
     edges.push_back(forward_edge);
     graph[to].push_back(edges.size());
     edges.push_back(backward_edge);
+  }
+  void RandomData() {
+    cout<<"Random Data\n";
+    int num_left, num_right;
+    num_left = (rand() % 5) + 1;
+    num_right = (rand() % 10) + 1;
+    cout <<num_left<<" "<<num_right<<"\n";
+    answer.resize(num_left);
+    graph.resize(2+num_left+num_right);
+    for (int i = 1; i <= num_left; ++i) {
+        add_edge(0, i);
+    }
+
+    for (int i = 1; i <= num_left; ++i) {
+      for (int j = num_left+1; j <= num_left+num_right; ++j) {
+        int bit;
+        bit = rand() % 2;
+        cout<<bit<<" ";
+        if (bit){
+          add_edge(i, j);
+        }
+      }
+      cout<<"\n";
+    }
+
+    for (int j = num_left+1; j <= num_left+num_right; ++j) {
+        add_edge(j, num_left+num_right+1);
+    }
+
   }
 
   void ReadData() {
@@ -80,7 +116,12 @@ class MaxMatching {
 
   void WriteResponse(const vector<int>& matching) {
     for (int i = 0; i < matching.size(); ++i) {
-        cout << matching[i]<<" ";
+      if (i > 0)
+        cout << " ";
+      if (matching[i] == -1)
+        cout << "-1";
+      else
+        cout << (matching[i]);
     }
     cout << "\n";
   }
@@ -204,5 +245,9 @@ int main() {
   std::ios_base::sync_with_stdio(false);
   MaxMatching max_matching;
   max_matching.Solve();
+  //for (int i = 0; i< 30; i++){
+  //  MaxMatching max_matching;
+  //  max_matching.TestSolve();
+  //}
   return 0;
 }
