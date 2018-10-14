@@ -36,12 +36,14 @@ class MaxMatching {
     vector<int> matching = FindMatching();
     WriteResponse(matching);
   }
+
+  /* for testing only
   void TestSolve() {
     RandomData();
     vector<int> matching = FindMatching();
     WriteResponse(matching);
     //CountingCheck(matching);
-  }
+  } */
 
  private:
   void add_edge(int from, int to) {
@@ -55,6 +57,8 @@ class MaxMatching {
     graph[to].push_back(edges.size());
     edges.push_back(backward_edge);
   }
+
+  /* for testing only
   void RandomData() {
     cout<<"Random Data\n";
     int num_left, num_right;
@@ -82,33 +86,31 @@ class MaxMatching {
     for (int j = num_left+1; j <= num_left+num_right; ++j) {
         add_edge(j, num_left+num_right+1);
     }
-
-  }
+  } */
 
   void ReadData() {
     int num_left, num_right;
     cin >> num_left >> num_right;
     answer.resize(num_left);
-    //graph.resize(num_left+num_right+2); //resize to total number of nodes
-    //vector<vector<bool>> adj_matrix(num_left, vector<bool>(num_right));
-    graph.resize(2+num_left+num_right);
+    graph.resize(2+num_left+num_right); //place all left and right nodes in a single vector
 
+    // add auxilary edges that connects from source to left nodes
     for (int i = 1; i <= num_left; ++i) {
         add_edge(0, i);
     }
 
+    // user input node connectivities
     for (int i = 1; i <= num_left; ++i) {
       for (int j = num_left+1; j <= num_left+num_right; ++j) {
         int bit;
         cin >> bit;
-        //adj_matrix[i][j] = (bit == 1);
         if (bit){
-          //cout<<"adding edge i,j:"<<i<<" "<<j<<"\n";
           add_edge(i, j);
         }
       }
     }
 
+    // add auxilary edges that connects from right nodes to sink
     for (int j = num_left+1; j <= num_left+num_right; ++j) {
         add_edge(j, num_left+num_right+1);
     }
@@ -126,6 +128,7 @@ class MaxMatching {
     cout << "\n";
   }
 
+  // for debugging
   void showEdge(vector<Edge> edges, int j){
     std::cout << edges[j].from <<" ";
     std::cout << edges[j].to <<" ";
@@ -133,6 +136,7 @@ class MaxMatching {
     std::cout << edges[j].flow <<"\n";
   }
 
+  // for debugging
   void showGraph( vector<vector<int> > graph, vector<Edge> edges){
     std::cout << "show graph edges: \n";
     for(int j = 0; j<edges.size();j++){
@@ -150,6 +154,7 @@ class MaxMatching {
     std::cout<<"\n";
   }
 
+  // for debugging
   void showTrack(vector<int> trackEdges){
     cout<< "trackEdges: ";
     for (int i = 0; i<trackEdges.size(); ++i){
@@ -169,24 +174,19 @@ class MaxMatching {
   }
 
   void updateGraph(vector<int>& trackEdges,  int curEdge){
-      //die("line135");
       if (curEdge != -1){
         add_flow(curEdge);
         int newEdge = trackEdges[curEdge];
-        //cout<<"newEdge = "<< newEdge<<"\n";
         updateGraph(trackEdges, newEdge);
       }
   }
 
+  // recursive DFS to quickly search for the path to go from source to sink
   void dfs( int oldEdge, int curNode, vector<int>& visited, vector<int>& trackEdges, int& breaker, int& lastEdge) {
-    //die("line 121");
     visited[curNode] = 1;
-    //cout<<"curNode = "<<curNode<<"\n";
-    //cout<<"breaker = "<<breaker<<"\n";
-    //cout<<"true to break? : "<<curNode - graph.size() + 1<<"\n";
     if(!breaker){
+        // stop recursion if found sink
         if(curNode == graph.size()-1){
-            //cout<<"breaking!!!!!!!!!!!!!!\n";
             lastEdge = oldEdge;
             breaker = 1;
         }
@@ -195,13 +195,15 @@ class MaxMatching {
             int endNode = edges[edgeID].to;
             int resiFlow = edges[edgeID].capacity-edges[edgeID].flow;
 
+            // do not search paths for visited nodes and paths without available residual flow
             if (visited[endNode] || !resiFlow) {continue;}
-            //cout<<"save edge:"<<edgeID<<"\n";
             trackEdges[edgeID] = oldEdge;
             dfs(edgeID, endNode, visited, trackEdges, breaker, lastEdge);
         }
     }
   }
+
+  // provide answer in vector format
   vector<int> returnMatch(){
 
       for(int i = 0; i<answer.size(); ++i){
@@ -209,8 +211,10 @@ class MaxMatching {
         for (int j = 0; j<graph[i+1].size();++j){
           int edgeID = graph[i+1][j];
           int toNode = edges[edgeID].to;
+
+          // record connected flight for each crew ID
           if(edges[edgeID].flow == 1){
-            answer[i] = toNode-answer.size();
+            answer[i] = toNode-answer.size(); // convert node ID into flight ID
             noEdge = false;
             continue;
           }
@@ -219,22 +223,19 @@ class MaxMatching {
       }
       return answer;
   }
+
+  //general outline of the algorithm to solve for optimal matching
   vector<int> FindMatching() {
     int breaker = 1;
     while (breaker) {
         vector<int> trackEdges(edges.size(),-1);
-
         vector<int> visited( graph.size(),0);
-
         visited[0] = 1;
         breaker = 0;
         int lastEdge;
+
         dfs(-1, 0, visited, trackEdges, breaker, lastEdge);
-        //cout<<"checkVal = "<< checkVal<<"\n";
-        //cout<<"lastEdge = "<<lastEdge<<"\n";
         updateGraph(trackEdges, lastEdge);
-        //cout<<"done update graph\n";
-        //showTrack(trackEdges);
     }
 
     return returnMatch();
@@ -245,9 +246,11 @@ int main() {
   std::ios_base::sync_with_stdio(false);
   MaxMatching max_matching;
   max_matching.Solve();
-  //for (int i = 0; i< 30; i++){
-  //  MaxMatching max_matching;
-  //  max_matching.TestSolve();
-  //}
+
+  /* for testing only
+  for (int i = 0; i< 30; i++){
+    MaxMatching max_matching;
+    max_matching.TestSolve();
+  } */
   return 0;
 }
