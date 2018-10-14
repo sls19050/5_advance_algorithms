@@ -194,10 +194,10 @@ class MaxMatching {
             int edgeID = graph[curNode][i];
             int endNode = edges[edgeID].to;
             int resiFlow = edges[edgeID].capacity-edges[edgeID].flow;
-            //cout<<"save edge:"<<edgeID<<"\n";
-            trackEdges[edgeID] = oldEdge;
 
             if (visited[endNode] || !resiFlow) {continue;}
+            //cout<<"save edge:"<<edgeID<<"\n";
+            trackEdges[edgeID] = oldEdge;
             dfs(edgeID, endNode, visited, trackEdges, breaker, lastEdge);
         }
     }
