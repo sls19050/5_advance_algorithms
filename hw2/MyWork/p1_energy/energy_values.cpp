@@ -9,6 +9,12 @@ typedef std::vector<double> Column;
 typedef std::vector<double> Row;
 typedef std::vector<Row> Matrix;
 
+
+void die(const std::string& msg) {
+    std::cerr << msg << std::endl;
+    exit(1);
+}
+
 struct Equation {
     Equation(const Matrix &a, const Column &b):
         a(a),
@@ -42,17 +48,35 @@ Equation ReadEquation() {
     return Equation(a, b);
 }
 
+
+
 Position SelectPivotElement(
-  const Matrix &a, 
-  std::vector <bool> &used_rows, 
-  std::vector <bool> &used_columns) {
-    // This algorithm selects the first free element.
-    // You'll need to improve it to pass the problem.
-    Position pivot_element(0, 0);
-    while (used_rows[pivot_element.row])
-        ++pivot_element.row;
-    while (used_columns[pivot_element.column])
-        ++pivot_element.column;
+    const Matrix &a,
+    std::vector <bool> &used_rows,
+    std::vector <bool> &used_columns) {
+    int row, column;
+    row = 0;
+    column = 0;
+
+    while (used_rows[row])
+        ++row;
+    while (used_columns[column])
+        ++column;
+
+    //scan the rest of the matrix and find the row with the left-most element
+    int mostLeftCol = 100;
+    int rowIDmLC = 0;
+    for (int i = row; i<a.size(); i++){
+        for(int j = column; j<a[i].size(); j++){
+            double curEle = a[i][j];
+            if (curEle != 0.0 && j < mostLeftCol) {
+                rowIDmLC = i;
+                mostLeftCol = j;
+                break;
+            }
+        }
+    }
+    Position pivot_element(mostLeftCol, rowIDmLC);
     return pivot_element;
 }
 
@@ -64,7 +88,31 @@ void SwapLines(Matrix &a, Column &b, std::vector <bool> &used_rows, Position &pi
 }
 
 void ProcessPivotElement(Matrix &a, Column &b, const Position &pivot_element) {
-    // Write your code here
+
+    //Rescale Pivot Row
+    double denominator = a[pivot_element.row][pivot_element.column];
+    for (int i = 0; i<a[pivot_element.row].size(); i++){
+        a[pivot_element.row][i] = a[pivot_element.row][i] / denominator;
+    }
+    b[pivot_element.row] = b[pivot_element.row] / denominator;
+
+    //use pivot to subtract all rows below pivot
+    for (int i = pivot_element.row+1; i<a.size(); i++){
+        double multiplier = a[i][pivot_element.column];
+        for (int j = pivot_element.column; j<a[i].size(); j++){
+            a[i][j] = a[i][j] - multiplier * a[pivot_element.row][j];
+        }
+        b[i] = b[i] - multiplier * b[pivot_element.row];
+    }
+
+    //use pivot to subtract all rows above pivot
+    for (int i = pivot_element.row-1; i>=0; i--){
+        double multiplier = a[i][pivot_element.column];
+        for (int j = pivot_element.column; j<a[i].size(); j++){
+            a[i][j] = a[i][j] - multiplier * a[pivot_element.row][j];
+        }
+        b[i] = b[i] - multiplier * b[pivot_element.row];
+    }
 }
 
 void MarkPivotElementUsed(const Position &pivot_element, std::vector <bool> &used_rows, std::vector <bool> &used_columns) {
