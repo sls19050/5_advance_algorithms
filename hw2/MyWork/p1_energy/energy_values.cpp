@@ -1,6 +1,8 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <cstdint>
+#include <limits>
 
 const double EPS = 1e-6;
 const int PRECISION = 20;
@@ -64,8 +66,8 @@ Position SelectPivotElement(
         ++column;
 
     //scan the rest of the matrix and find the row with the left-most element
-    int mostLeftCol = 100;
-    int rowIDmLC = 0;
+    int mostLeftCol = std::numeric_limits<std::int32_t>::max();
+    int rowIDmLC = -1; // this -1 value is critical to handling cases of no solution
     for (int i = row; i<a.size(); i++){
         for(int j = column; j<a[i].size(); j++){
             double curEle = a[i][j];
@@ -129,6 +131,12 @@ Column SolveEquation(Equation equation) {
     std::vector <bool> used_rows(size, false);
     for (int step = 0; step < size; ++step) {
         Position pivot_element = SelectPivotElement(a, used_rows, used_columns);
+        //handle case when there is no solution (due to a degenerate equation or impossible to solve)
+        if (pivot_element.row == -1){
+            // returns an empty vector when no solution
+            Column emptyVec;
+            return {emptyVec};
+        }
         SwapLines(a, b, used_rows, pivot_element);
         ProcessPivotElement(a, b, pivot_element);
         MarkPivotElementUsed(pivot_element, used_rows, used_columns);
