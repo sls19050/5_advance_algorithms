@@ -10,9 +10,11 @@
 
 using namespace std;
 
-const double EPS = 1e-6;
+const double EPS = 1e-3;
 const int PRECISION = 20;
 const double MAX_VAL = 1e9;
+const double MIN_DOUBLE = -std::numeric_limits<double>::max();
+
 
 typedef vector<vector<double>> matrix;
 typedef std::vector<double> Column;
@@ -163,58 +165,50 @@ Column SolveEquation(Equation equation) {
     return b;
 }
 
-
+/*    to check if the calculated solution satisfy all inequalities    */
 bool passNInequal (Column tempAns, int n, matrix &A, vector<double>& b){
-    //cout<<"n = "<<n<<"\n";
+
     for (int i = 0; i<A.size(); i++){
-        //cout<<"for i = "<<i<<"\n";
+
         double tempSum = 0;
+
         for (int j = 0; j<tempAns.size(); j++){
-            //cout<<"    for j = "<<j<<"\n";
             tempSum = tempSum + A[i][j] * tempAns[j];
-            //cout<<"    tempSum, Aij, tempAnsj ="<<tempSum<<", "<<A[i][j]<<", "<<tempAns[j]<<"\n";
         }
+
         if (tempSum > b[i] + EPS){
-            //cout<<"return false\n";
             return false;
         }
     }
-    //cout<<"return true\n";
+
     return true;
 }
 
-/*    define function to get subsets     */
+/*    recursively solve for all subsets of inequalities    */
 void combinUtil(vector<int> mySet, vector<int> resultSets, int start, int last, int index, int m, matrix& A, vector<double>& b, vector<double>& resultVec, double& resultVal, vector<double>& c){
     if (index == m){
         Matrix tempA;
         Column tempB(m, 0.0);
+
         for (int i=0; i<m; i++){
-            //cout<<resultSets[i]<<" ";
-            // add equations into a temp matrix A and vec B
             tempA.push_back(A[resultSets[i]]);
             tempB[i] = b[resultSets[i]];
-
         }
-        //cout<<"equation to be solved:\n";
+
         Equation tempEq(tempA, tempB);
-        //tempEq.showEq();
         Column tempAns = SolveEquation(tempEq);
         double tempVal = 0.0;
+
         if (!tempAns.empty()){
-            //cout<<"show tempVal & tempAns = (";
             for (int i = 0; i< c.size(); i++){
-                //cout<<"show ci = "<<c[i]<<"\n";
                 tempVal = tempVal + tempAns[i] * c[i];
-                //cout<<tempVal<<"& "<<tempAns[i]<<"), (";
             }
-            //cout<<"\n";
+            //only keep the vertex that 1) passed all inequalities, and 2) has the greatest value
             if ( passNInequal(tempAns,b.size()-m-1, A, b) && tempVal > resultVal){
                 resultVec = tempAns;
                 resultVal = tempVal;
             }
         }
-        //die("line 181");
-        //cout<<"\n";
     } else {
         for (int j=start; j<=last && last-j+1 >= m-index; j++){
             resultSets[index] = mySet[j];
@@ -223,29 +217,26 @@ void combinUtil(vector<int> mySet, vector<int> resultSets, int start, int last, 
     }
 }
 
+/*    return solution after solving all combinations of inequalities    */
 pair<int, vector<double>> solveCombin(vector<int> mySet, int n, int m, matrix& A, vector<double>& b, vector<double>& c){
     vector<int> resultSets (m);
     vector<double> resultVec;
-    double resultVal = -1.0;
-    //cout<<"solving combin:\n";
+    double resultVal = MIN_DOUBLE;
     combinUtil(mySet, resultSets, 0, n-1, 0, m, A, b, resultVec, resultVal, c);
 
     int caseID = 0;
-    if (resultVal == -1.0){
+    if (resultVal == MIN_DOUBLE){
         caseID = -1;
     } else {
         double sumAmt;
+
         for (int i = 0; i<resultVec.size(); i++){
             sumAmt += resultVec[i];
         }
-        //cout<<"sumAmt = "<<sumAmt<<"\n";
-        //cout<<"MAX_VAL = "<<MAX_VAL<<"\n";
-        //cout<<"MAX_VAL - sumAmt = "<<MAX_VAL - sumAmt<<"\n";
-        //cout<<"MAX_VAL == sumAmt = "<<(MAX_VAL == sumAmt)<<"\n";
+
         if (sumAmt >= MAX_VAL - EPS){
             caseID = 1;
         }
-        //die("line 223");
     }
     return {caseID, resultVec};
 }
@@ -257,9 +248,11 @@ pair<int, vector<double>> solve_diet_problem(
     vector<double> b,
     vector<double> c) {
 
-    // solve subsets of equations for all vertices
+    // create rowID to help generate subsets
     vector<int> rowID(n+m+1);
     std::iota(std::begin(rowID),std::end(rowID),0 );
+
+    // return the optimal answer
   return solveCombin(rowID, n+m+1, m, A, b, c);
 }
 
@@ -308,7 +301,6 @@ int main(){
       printf("Bounded solution\n");
       for (int i = 0; i < m; i++) {
         printf("%.18f%c", ans.second[i], " \n"[i + 1 == m]);
-        //cout<<ans.second[i]<<"\n";
       }
       break;
     case 1:
