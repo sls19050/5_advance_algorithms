@@ -3,8 +3,14 @@
 #include <list>
 #include <stack>
 #include <cmath>
-#define NIL -1
+#include <limits>
+#include <queue>
+#include <tuple>
+
 using namespace std;
+
+//const int MAX_INT = std::numeric_limits<int>::max();
+const int NIL = -1;
 
 void die(const std::string& msg) {
     std::cerr << msg << std::endl;
@@ -24,16 +30,19 @@ public:
     int numVertices;
     int numEdges;
     vector<list<int>> adj;
+    queue<int> reverseTopOrderNodeID;
 
-    void getSCC(int u, vector<int> disc, vector<int> low,
-                stack<int>& st, vector<bool> stackMem);
+    void getSCC(int u, vector<int>& disc, vector<int>& low,
+                stack<int>& st, vector<bool> stackMem, bool& pass);
 
     Graph(int n, int m);
     int convertIndex(int i);
     void clauseToEdge(int v, int w);
     void SCC();
+    bool failSCC(int w, vector<int>& countVars);
     bool isSatisfiable(vector<int>& result);
     void showGraph();
+    tuple<int,int> getVarIDandSign(int curLit);
 };
 
 Graph::Graph(int n, int m){
@@ -49,6 +58,24 @@ int Graph::convertIndex(int i){
     } else{
         return i-1;
     }
+}
+
+bool Graph::failSCC(int w, vector<int>& countVars){
+
+    int varID, value, oldCount;
+    if (w>=numVar){
+        varID = w-numVar; //for negated literals
+        value = -1;
+    } else{
+        varID = w;
+        value = 1;
+    }
+    oldCount = abs(countVars[varID]);
+    countVars[varID] = countVars[varID] + value;
+    if (oldCount > abs(countVars[varID])){
+        return true;
+    }
+    return false;
 }
 
 void Graph::clauseToEdge(int l1, int l2){
@@ -75,9 +102,14 @@ void Graph::showGraph(){
     }
 }
 
-void Graph::getSCC(int u, vector<int> disc, vector<int> low,
-                   stack<int>& st, vector<bool> stackMem){
-    int time = 0;
+void Graph::getSCC(int u, vector<int>& disc, vector<int>& low,
+                   stack<int>& st, vector<bool> stackMem, bool& pass){
+
+    if(pass){
+
+    static int time = 0;
+
+    //cout<<"recursive, at u = "<<u<<endl;
 
     time++;
     disc[u] = time;
@@ -90,8 +122,8 @@ void Graph::getSCC(int u, vector<int> disc, vector<int> low,
         int v = *i;
 
         if(disc[v] == NIL){
-            getSCC(v, disc, low, st, stackMem);
-            low[u] = min(low[u], disc[v]);
+            getSCC(v, disc, low, st, stackMem, pass);
+            low[u] = min(low[u], low[v]);
         }
         else if (stackMem[v] == true){
             low[u] = min(low[u], disc[v]);
@@ -99,34 +131,68 @@ void Graph::getSCC(int u, vector<int> disc, vector<int> low,
     }
     int w = 0;
     if (low[u] == disc[u]){
+        vector<int> countVars(numVar, 0);
         while (st.top() != u){
             w = st.top();
-            cout<<w<<" ";
+            //cout<<w<<" ";
+            reverseTopOrderNodeID.push(w);
+            if(failSCC(w, countVars)){
+                pass = false;
+                //cout<<"\nfailed SCC! breaking now!\n";
+                break;
+            }
             stackMem[w] = false;
             st.pop();
         }
         w = st.top();
-        cout<< w<<endl;
+        //cout<< w<<endl;
+        reverseTopOrderNodeID.push(w);
+        if(failSCC(w, countVars)){
+            pass = false;
+            //cout<<"\nfailed SCC! breaking now!\n";
+        }
         stackMem[w] = false;
         st.pop();
     }
-}
-
-void Graph::SCC(){
-    vector<int> disc(numVertices, NIL);
-    vector<int> low(numVertices, NIL);
-    vector<bool> stackMem(numVertices, false);
-    stack<int> st;
-
-    for(int i = 0; i< numVertices; i++){
-        if(disc[i] == NIL){
-            getSCC(i, disc, low, st, stackMem);
-        }
     }
 }
 
-bool Graph::isSatisfiable(vector<int>& result) {
-    return false;
+tuple<int,int> Graph::getVarIDandSign(int curLit){
+    //cout<<"curLit = "<<curLit<<endl;
+    if (curLit>=numVar){
+        return make_tuple(curLit - numVar, -1);
+    }
+    return make_tuple(curLit, 1);
+}
+
+bool Graph::isSatisfiable(vector<int>& result){
+    vector<int> disc(numVertices, NIL);
+    vector<int> low(numVertices, NIL);
+    vector<bool> stackMem(numVertices, false);
+    bool pass = true;
+    stack<int> st;
+
+    for(int i = 0; i< numVertices; i++){
+        //cout<<"loop in SCC, i = "<<i<<endl;
+        if(disc[i] == NIL){
+            getSCC(i, disc, low, st, stackMem, pass);
+        }
+        if(!pass){return pass;}
+    }
+
+    result.resize(numVar);
+    while (!reverseTopOrderNodeID.empty()){
+        int curLit, var, sign;
+        curLit = reverseTopOrderNodeID.front();
+        reverseTopOrderNodeID.pop();
+
+        tie(var, sign) = getVarIDandSign(curLit);
+        if (result[var] == 0){
+            result[var] = sign;
+        }
+    }
+
+    return pass;
 }
 
 struct TwoSatisfiability {
@@ -185,19 +251,22 @@ int main() {
         twoSat.clauseToEdge(firstVar, secondVar);
     }
 
-    twoSat.showGraph();
-    twoSat.SCC();
+    //twoSat.showGraph();
+    //twoSat.SCC();
 
     vector<int> result(n);
     if (twoSat.isSatisfiable(result)) {
         cout << "SATISFIABLE" << endl;
-        for (int i = 1; i <= n; ++i) {
-            if (result[i-1]) {
-                cout << -i;
-            } else {
-                cout << i;
+        for (int i = 0; i < n; ++i) {
+            if(result[i]==0){
+                cout<<i+1;
+            } else{
+                cout<<result[i]*(i+1);
+                //cout<<result[i];
             }
-            if (i < n) {
+
+
+            if (i < n-1) {
                 cout << " ";
             } else {
                 cout << endl;
